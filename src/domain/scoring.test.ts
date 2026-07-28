@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { comboStage, noteScore, reverseScore, roundDownToTen, scoreRange } from './scoring';
+import { LIMITS, safeInteger } from './models';
 const standard = { system: 'standard' as const, initial: 1000, difference: 100 };
 const shinuchi = { system: 'shinuchi' as const, initial: 0, difference: 0 };
 describe('scoring', () => {
@@ -9,4 +10,13 @@ describe('scoring', () => {
   it('finds ordering-dependent bounds', () => { const r=scoreRange({good:12,ok:0,bad:1,drumroll:0,config:standard}); expect(r.maximum).toBeGreaterThan(r.minimum); expect(r.arrangementDependent).toBe(true); });
   it('returns no solution and multiple solutions', () => { expect(reverseScore(1, shinuchi,{totalNotes:1,maxDrumroll:0}).total).toBe(0); expect(reverseScore(1000,shinuchi,{totalNotes:1,maxDrumroll:10}).total).toBeGreaterThan(1); });
   it('validates boundary values', () => { expect(() => scoreRange({good:-1,ok:0,bad:0,drumroll:0,config:standard})).toThrow('不能为负数'); expect(() => reverseScore(0,shinuchi,{totalNotes:61,maxDrumroll:0})).toThrow(); });
+  it('accepts the expanded input limits and rejects values above them', () => {
+    expect(safeInteger(9_999, '良', LIMITS.notes)).toBe(9_999);
+    expect(safeInteger(9_999_990, '总分', LIMITS.score)).toBe(9_999_990);
+    expect(safeInteger(9_990, '初项', LIMITS.initial)).toBe(9_990);
+    expect(() => safeInteger(10_000, '连打数', LIMITS.drumroll)).toThrow('不能超过 9999');
+  });
+  it('handles large shinuchi counts without ordering search', () => {
+    expect(scoreRange({good:9_999,ok:0,bad:0,drumroll:9_999,config:shinuchi}).minimum).toBe(10_998_900);
+  });
 });

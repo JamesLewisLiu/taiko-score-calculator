@@ -28,6 +28,10 @@ function validate(input: ScoreInput): void {
 /** Exact min/max over every ordering. State merging keeps only extrema for an identical count/combo state. */
 export function scoreRange(input: ScoreInput): ScoreRange {
   validate(input);
+  if (input.config.system === 'shinuchi') {
+    const score = input.good * 1000 + input.ok * 500 + drumrollScore(input.drumroll);
+    return { minimum: score, maximum: score, exact: true, arrangementDependent: false };
+  }
   type V = [number, number];
   let states = new Map<string, V>([['0,0,0,0', [0, 0]]]);
   const target = [input.good, input.ok, input.bad];
@@ -64,12 +68,16 @@ export function reverseScore(targetScore: number, config: ScoreConfig, constrain
   const known = [constraints.knownGood, constraints.knownOk, constraints.knownBad];
   known.forEach((v, i) => { if (v !== undefined) safeInteger(v, ['已知良', '已知可', '已知不可'][i], n); });
   if (known.reduce<number>((sum, v) => sum + (v ?? 0), 0) > n) throw new Error('已知良、可、不可之和不能超过总音符数');
+  if (n > LIMITS.unconstrainedReverseNotes && known.filter(v => v !== undefined).length < 2) {
+    throw new Error(`候选过多：总音符数超过 ${LIMITS.unconstrainedReverseNotes} 时，请至少填写两个已知判定数量`);
+  }
   const matches: Candidate[] = [];
   for (let good = 0; good <= n; good++) for (let ok = 0; ok <= n - good; ok++) {
     const bad = n - good - ok;
     if ((known[0] !== undefined && good !== known[0]) || (known[1] !== undefined && ok !== known[1]) || (known[2] !== undefined && bad !== known[2])) continue;
-    for (let drumroll = 0; drumroll <= maxRoll; drumroll++) {
-      const range = scoreRange({ good, ok, bad, drumroll, config });
+    const baseRange = scoreRange({ good, ok, bad, drumroll: 0, config });
+    for (let drumroll = Math.max(0, Math.ceil((targetScore - baseRange.maximum) / 100)); drumroll <= Math.min(maxRoll, Math.floor((targetScore - baseRange.minimum) / 100)); drumroll++) {
+      const range = { ...baseRange, minimum: baseRange.minimum + drumrollScore(drumroll), maximum: baseRange.maximum + drumrollScore(drumroll) };
       if (targetScore >= range.minimum && targetScore <= range.maximum) matches.push({ good, ok, bad, drumroll, score: targetScore, range });
     }
   }

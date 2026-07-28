@@ -7,7 +7,7 @@ export interface ReverseConstraints { totalNotes: number; maxDrumroll: number; k
 export interface Candidate extends Judgements { score: number; range: ScoreRange }
 export interface ReverseResult { candidates: Candidate[]; total: number; truncated: boolean }
 
-export const LIMITS = { notes: 200, reverseNotes: 60, drumroll: 500, score: 100_000_000, initial: 100_000, difference: 100_000 } as const;
+export const LIMITS = { notes: 9_999, reverseNotes: 9_999, unconstrainedReverseNotes: 60, drumroll: 9_999, score: 9_999_990, initial: 9_990, difference: 9_990 } as const;
 
 export function safeInteger(value: number, label: string, maximum: number): number {
   if (!Number.isSafeInteger(value)) throw new Error(`${label}必须是安全整数`);
